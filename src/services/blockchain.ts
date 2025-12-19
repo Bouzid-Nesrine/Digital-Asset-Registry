@@ -9,7 +9,7 @@
 
 import { Asset, AssetType, UsageRecord, TransactionResult, SEPOLIA_CHAIN_ID } from '@/types/asset';
 
-// Placeholder Smart Contract ABI (simplified for demo)
+// Placeholder Smart Contract ABI hna jma3a 7oto the ABI after deployment
 export const CONTRACT_ABI = [
   "function registerAsset(string name, string assetType, string description, bytes32 hash) public returns (uint256)",
   "function getMyAssets() public view returns (tuple(uint256 id, string name, string assetType, string description, bytes32 hash, address owner, uint256 createdAt, address[] authorizedUsers)[])",
@@ -19,10 +19,10 @@ export const CONTRACT_ABI = [
   "function getUsageHistory(address user) public view returns (tuple(uint256 assetId, string action, address user, uint256 timestamp)[])"
 ];
 
-// Placeholder contract address (deploy your own contract and update this)
+// hna jam3a 7oto the address ta3 the contract after deployment
 export const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-// In-memory storage for mock data
+// hado rahom test data berk after real deployment na7ohom 
 let mockAssets: Asset[] = [
   {
     id: '1',
@@ -91,7 +91,7 @@ let mockUsageHistory: UsageRecord[] = [
   },
 ];
 
-// Simulate transaction delay
+// hada simulation code za3ma ydir delay w mena w mlhik rakom 3labalkom (bouchrika vibes :) )
 const simulateTransaction = <T>(result: T, delay = 1500): Promise<T> => {
   return new Promise((resolve) => setTimeout(() => resolve(result), delay));
 };

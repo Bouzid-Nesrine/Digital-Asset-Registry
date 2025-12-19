@@ -12,12 +12,18 @@ import { Badge } from '@/components/ui/badge';
 import { Asset, AssetType } from '@/types/asset';
 import { cn } from '@/lib/utils';
 
+
+
 interface AssetCardProps {
   asset: Asset;
   isOwner: boolean;
   onTransfer?: () => void;
   onGrantAccess?: () => void;
 }
+
+
+
+
 
 const assetTypeConfig: Record<AssetType, { icon: typeof Database; color: string }> = {
   Dataset: { icon: Database, color: 'bg-accent/20 text-accent border-accent/30' },

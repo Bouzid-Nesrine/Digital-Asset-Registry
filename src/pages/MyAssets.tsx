@@ -66,6 +66,15 @@ export default function MyAssets() {
                 onTransfer={() => { setSelectedAsset(asset); setTransferOpen(true); }}
                 onGrantAccess={() => { setSelectedAsset(asset); setGrantOpen(true); }}
               />
+
+            //   <AssetCard
+            //   key={asset.id}
+            //   asset={asset}
+            //   isOwner={asset.owner.toLowerCase() === address?.toLowerCase()}
+            //   onTransfer={handleTransfer}
+            //   onGrantAccess={handleGrantAccess}
+            // />
+
             ))}
           </div>
         )}
