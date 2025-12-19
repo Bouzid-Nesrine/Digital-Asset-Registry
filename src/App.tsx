@@ -21,7 +21,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<RegisterAsset />} />
             <Route path="/register" element={<RegisterAsset />} />
             <Route path="/my-assets" element={<MyAssets />} />
             <Route path="/asset/:id" element={<AssetDetails />} />
