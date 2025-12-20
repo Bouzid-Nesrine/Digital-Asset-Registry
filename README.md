@@ -92,13 +92,6 @@ This project demonstrates:
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
 
-## License
-
-[Specify your license here]
-
-## Contact
-
-[Add contact information or links to documentation]
 
 ---
 
