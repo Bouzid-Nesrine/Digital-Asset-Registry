@@ -1,348 +1,742 @@
-/**
- * Mock Blockchain Service
- * 
- * This service simulates blockchain interactions for the Digital Asset Registry DApp.
- * In production, replace mock functions with actual smart contract calls using ethers.js.
- * 
- * Target Network: Sepolia Testnet (Chain ID: 11155111)
+/** * Blockchain Service for Digital Asset Registry DApp
+ *
+ * This service handles real blockchain interactions with the DigitalAssetRegistry contract
+ * deployed on Sepolia Testnet (Chain ID: 11155111)
  */
 
+import { ethers } from 'ethers';
 import { Asset, AssetType, UsageRecord, TransactionResult, SEPOLIA_CHAIN_ID } from '@/types/asset';
 
-// Placeholder Smart Contract ABI hna jma3a 7oto the ABI after deployment
+// Replace with your actual deployed contract ABI from Remix
 export const CONTRACT_ABI = [
-  "function registerAsset(string name, string assetType, string description, bytes32 hash) public returns (uint256)",
-  "function getMyAssets() public view returns (tuple(uint256 id, string name, string assetType, string description, bytes32 hash, address owner, uint256 createdAt, address[] authorizedUsers)[])",
-  "function transferOwnership(uint256 assetId, address newOwner) public",
-  "function grantAccess(uint256 assetId, address user) public",
-  "function revokeAccess(uint256 assetId, address user) public",
-  "function getUsageHistory(address user) public view returns (tuple(uint256 assetId, string action, address user, uint256 timestamp)[])"
-];
-
-// hna jam3a 7oto the address ta3 the contract after deployment
-export const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-// hado rahom test data berk after real deployment na7ohom 
-let mockAssets: Asset[] = [
-  {
-    id: '1',
-    name: 'Climate Dataset 2024',
-    type: 'Dataset',
-    description: 'Comprehensive climate data from 150 weather stations across North America, collected between 2020-2024.',
-    hash: 'a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a',
-    owner: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD88',
-    createdAt: new Date('2024-01-15'),
-    authorizedUsers: ['0x8ba1f109551bD432803012645Ac136ddd64DBA72'],
-  },
-  {
-    id: '2',
-    name: 'GPT-Nano Model',
-    type: 'Model',
-    description: 'A lightweight transformer model optimized for edge devices with 125M parameters.',
-    hash: 'b9f5e8c2d1a3f7e9c6b4a2d8f1e3c5b7a9d2f4e6c8b1a3d5f7e9c2b4a6d8f1e3',
-    owner: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD88',
-    createdAt: new Date('2024-02-20'),
-    authorizedUsers: [],
-  },
-  {
-    id: '3',
-    name: 'Blockchain Audit Library',
-    type: 'Code',
-    description: 'Open-source smart contract auditing toolkit with automated vulnerability detection.',
-    hash: 'c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2',
-    owner: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
-    createdAt: new Date('2024-03-10'),
-    authorizedUsers: ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD88'],
-  },
-];
-
-let mockUsageHistory: UsageRecord[] = [
-  {
-    id: '1',
-    assetId: '1',
-    assetName: 'Climate Dataset 2024',
-    action: 'registered',
-    walletAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD88',
-    timestamp: new Date('2024-01-15T10:30:00'),
-  },
-  {
-    id: '2',
-    assetId: '2',
-    assetName: 'GPT-Nano Model',
-    action: 'registered',
-    walletAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD88',
-    timestamp: new Date('2024-02-20T14:15:00'),
-  },
-  {
-    id: '3',
-    assetId: '1',
-    assetName: 'Climate Dataset 2024',
-    action: 'access_granted',
-    walletAddress: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
-    timestamp: new Date('2024-02-25T09:00:00'),
-  },
-  {
-    id: '4',
-    assetId: '3',
-    assetName: 'Blockchain Audit Library',
-    action: 'registered',
-    walletAddress: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
-    timestamp: new Date('2024-03-10T11:45:00'),
-  },
-];
-
-// hada simulation code za3ma ydir delay w mena w mlhik rakom 3labalkom (bouchrika vibes :) )
-const simulateTransaction = <T>(result: T, delay = 1500): Promise<T> => {
-  return new Promise((resolve) => setTimeout(() => resolve(result), delay));
-};
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "AccessGranted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "AccessRevoked",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "AssetRegistered",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "grantAccess",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "assetType",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "hash",
+				"type": "bytes32"
+			}
+		],
+		"name": "registerAsset",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "revokeAccess",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "assetCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "assets",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "assetType",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "hash",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "createdAt",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "checkAccess",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			}
+		],
+		"name": "getAssetDetails",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "assetType",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "hash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "createdAt",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address[]",
+						"name": "authorizedUsers",
+						"type": "address[]"
+					}
+				],
+				"internalType": "struct DigitalAssetRegistry.Asset",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getMyAssets",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "assetType",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "description",
+						"type": "string"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "hash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "createdAt",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address[]",
+						"name": "authorizedUsers",
+						"type": "address[]"
+					}
+				],
+				"internalType": "struct DigitalAssetRegistry.Asset[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getUsageHistory",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "assetId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "action",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct DigitalAssetRegistry.UsageRecord[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
+// Replace with your actual deployed contract address from Remix
+export const CONTRACT_ADDRESS = "0x6638675940a3fDD57c2a648f32AdC5CC1f1254f0";
 
 /**
- * Generate a mock transaction hash
+ * Helper function to convert contract asset data to frontend Asset type
  */
-const generateTxHash = (): string => {
-  const chars = '0123456789abcdef';
-  let hash = '0x';
-  for (let i = 0; i < 64; i++) {
-    hash += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return hash;
-};
+function convertToAsset(contractAsset: any): Asset {
+    return {
+        id: contractAsset.id.toString(),
+        name: contractAsset.name,
+        type: contractAsset.assetType as AssetType,
+        description: contractAsset.description,
+        hash: contractAsset.hash,
+        owner: contractAsset.owner,
+        createdAt: new Date(Number(contractAsset.createdAt) * 1000),
+        authorizedUsers: contractAsset.authorizedUsers
+    };
+}
+
+/**
+ * Helper function to convert contract usage record to frontend UsageRecord type
+ */
+function convertToUsageRecord(contractRecord: any, assetName: string): UsageRecord {
+    return {
+        id: `${contractRecord.assetId}-${contractRecord.timestamp}-${Math.random().toString(36).substring(2, 9)}`,
+        assetId: contractRecord.assetId.toString(),
+        assetName: assetName,
+        action: contractRecord.action,
+        walletAddress: contractRecord.user,
+        timestamp: new Date(Number(contractRecord.timestamp) * 1000)
+    };
+}
+
+/**
+ * Get ethers contract instance with signer if needed
+ */
+async function getContract(signerNeeded = false) {
+    if (!window.ethereum) {
+        throw new Error('No Ethereum provider detected');
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+
+    if (signerNeeded) {
+        const signer = await provider.getSigner();
+        return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+    }
+
+    return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+}
 
 /**
  * Register a new asset on the blockchain
  */
+/**
+ * Register a new asset on the blockchain
+ */
+/**
+ * Register a new asset on the blockchain
+ */
 export async function registerAsset(
-  name: string,
-  type: AssetType,
-  description: string,
-  hash: string,
-  ownerAddress: string
+    name: string,
+    type: AssetType,
+    description: string,
+    hash: string, // This comes from useFileHash and is a SHA-256 hex string
+    ownerAddress: string
 ): Promise<TransactionResult> {
-  try {
-    const newAsset: Asset = {
-      id: String(mockAssets.length + 1),
-      name,
-      type,
-      description,
-      hash,
-      owner: ownerAddress,
-      createdAt: new Date(),
-      authorizedUsers: [],
-    };
+    try {
+        const contract = await getContract(true);
 
-    mockAssets.push(newAsset);
+        // The hash from useFileHash is already a proper SHA-256 hash
+        // We just need to ensure it has the '0x' prefix that ethers.js expects
+        let hashBytes32 = hash;
+        if (!hash.startsWith('0x')) {
+            hashBytes32 = '0x' + hash;
+        }
 
-    // Add usage record
-    mockUsageHistory.push({
-      id: String(mockUsageHistory.length + 1),
-      assetId: newAsset.id,
-      assetName: name,
-      action: 'registered',
-      walletAddress: ownerAddress,
-      timestamp: new Date(),
-    });
+        // SHA-256 produces exactly 32 bytes (64 hex chars), which is perfect for bytes32
+        // No truncation needed as it's already the correct size
 
-    return simulateTransaction({
-      success: true,
-      hash: generateTxHash(),
-    });
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+        // Call the contract function
+        const tx = await contract.registerAsset(name, type, description, hashBytes32);
+
+        // Wait for confirmation
+        const receipt = await tx.wait();
+
+        return {
+            success: true,
+            hash: receipt.hash,
+        };
+    } catch (error) {
+        console.error('Registration error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error during asset registration',
+        };
+    }
 }
 
 /**
  * Get assets owned by or authorized to a specific wallet address
  */
+/**
+ * Get assets owned by or authorized to a specific wallet address
+ */
 export async function getMyAssets(walletAddress: string): Promise<Asset[]> {
-  const assets = mockAssets.filter(
-    (asset) =>
-      asset.owner.toLowerCase() === walletAddress.toLowerCase() ||
-      asset.authorizedUsers.some(
-        (user) => user.toLowerCase() === walletAddress.toLowerCase()
-      )
-  );
-  return simulateTransaction(assets, 500);
-}
+  try {
+    const contract = await getContract(true);
 
+    // Get the contract response
+    const result = await contract.getMyAssets();
+    console.log("Raw result:", result);
+
+    // The most reliable way to handle ethers.js Result objects with struct arrays
+    const assets: Asset[] = [];
+
+    // First try to get the length of the array
+    let length = 0;
+    try {
+      length = await result.length;
+      console.log("Array length:", length);
+    } catch (e) {
+      console.error("Couldn't get array length:", e);
+      return [];
+    }
+
+    // If there are items, process each one
+    if (length > 0) {
+      for (let i = 0; i < length; i++) {
+        try {
+          // Get each asset from the proxy
+          const assetData = await result[i];
+          console.log(`Asset ${i} data:`, assetData);
+
+          // Convert the tuple to our Asset type
+          // Your contract returns: [id, name, assetType, description, hash, owner, createdAt, authorizedUsers]
+          const [
+            id,
+            name,
+            assetType,
+            description,
+            hash,
+            owner,
+            createdAt,
+            authorizedUsers
+          ] = assetData;
+
+          assets.push({
+            id: id.toString(),
+            name: name || '',
+            type: (assetType as AssetType) || 'Dataset',
+            description: description || '',
+            hash: hash || '',
+            owner: owner || '',
+            createdAt: new Date(Number(createdAt.toString()) * 1000),
+            authorizedUsers: authorizedUsers || []
+          });
+        } catch (e) {
+          console.error(`Error processing asset ${i}:`, e);
+        }
+      }
+    }
+
+    console.log("Processed assets:", assets);
+    return assets;
+  } catch (error) {
+    console.error('Error fetching assets:', error);
+    return [];
+  }
+}
 /**
  * Get a single asset by ID
  */
 export async function getAssetById(assetId: string): Promise<Asset | null> {
-  const asset = mockAssets.find((a) => a.id === assetId);
-  return simulateTransaction(asset || null, 300);
+    try {
+        const contract = await getContract(true);
+        const contractAsset = await contract.getAssetDetails(assetId);
+        return convertToAsset(contractAsset);
+    } catch (error) {
+        console.error('Error fetching asset by ID:', error);
+        return null;
+    }
 }
 
 /**
  * Transfer ownership of an asset to a new address
  */
 export async function transferOwnership(
-  assetId: string,
-  currentOwner: string,
-  newOwner: string
+    assetId: string,
+    currentOwner: string,
+    newOwner: string
 ): Promise<TransactionResult> {
-  try {
-    const asset = mockAssets.find((a) => a.id === assetId);
-    
-    if (!asset) {
-      return { success: false, error: 'Asset not found' };
+    try {
+        const contract = await getContract(true);
+        const tx = await contract.transferOwnership(assetId, newOwner);
+        const receipt = await tx.wait();
+
+        return {
+            success: true,
+            hash: receipt.hash,
+        };
+    } catch (error) {
+        console.error('Transfer error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error during ownership transfer',
+        };
     }
-    
-    if (asset.owner.toLowerCase() !== currentOwner.toLowerCase()) {
-      return { success: false, error: 'Not the owner of this asset' };
-    }
-
-    asset.owner = newOwner;
-
-    mockUsageHistory.push({
-      id: String(mockUsageHistory.length + 1),
-      assetId,
-      assetName: asset.name,
-      action: 'transferred',
-      walletAddress: newOwner,
-      timestamp: new Date(),
-      details: `From ${currentOwner} to ${newOwner}`,
-    });
-
-    return simulateTransaction({
-      success: true,
-      hash: generateTxHash(),
-    });
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
 }
 
 /**
  * Grant access to an asset for a specific wallet address
  */
 export async function grantAccess(
-  assetId: string,
-  ownerAddress: string,
-  userAddress: string
+    assetId: string,
+    ownerAddress: string,
+    userAddress: string
 ): Promise<TransactionResult> {
-  try {
-    const asset = mockAssets.find((a) => a.id === assetId);
-    
-    if (!asset) {
-      return { success: false, error: 'Asset not found' };
-    }
-    
-    if (asset.owner.toLowerCase() !== ownerAddress.toLowerCase()) {
-      return { success: false, error: 'Not the owner of this asset' };
-    }
+    try {
+        const contract = await getContract(true);
+        const tx = await contract.grantAccess(assetId, userAddress);
+        const receipt = await tx.wait();
 
-    if (!asset.authorizedUsers.includes(userAddress)) {
-      asset.authorizedUsers.push(userAddress);
+        return {
+            success: true,
+            hash: receipt.hash,
+        };
+    } catch (error) {
+        console.error('Grant access error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error while granting access',
+        };
     }
-
-    mockUsageHistory.push({
-      id: String(mockUsageHistory.length + 1),
-      assetId,
-      assetName: asset.name,
-      action: 'access_granted',
-      walletAddress: userAddress,
-      timestamp: new Date(),
-    });
-
-    return simulateTransaction({
-      success: true,
-      hash: generateTxHash(),
-    });
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
 }
 
 /**
  * Revoke access from a user for a specific asset
  */
 export async function revokeAccess(
-  assetId: string,
-  ownerAddress: string,
-  userAddress: string
+    assetId: string,
+    ownerAddress: string,
+    userAddress: string
 ): Promise<TransactionResult> {
-  try {
-    const asset = mockAssets.find((a) => a.id === assetId);
-    
-    if (!asset) {
-      return { success: false, error: 'Asset not found' };
+    try {
+        const contract = await getContract(true);
+        const tx = await contract.revokeAccess(assetId, userAddress);
+        const receipt = await tx.wait();
+
+        return {
+            success: true,
+            hash: receipt.hash,
+        };
+    } catch (error) {
+        console.error('Revoke access error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error while revoking access',
+        };
     }
-    
-    if (asset.owner.toLowerCase() !== ownerAddress.toLowerCase()) {
-      return { success: false, error: 'Not the owner of this asset' };
-    }
-
-    asset.authorizedUsers = asset.authorizedUsers.filter(
-      (user) => user.toLowerCase() !== userAddress.toLowerCase()
-    );
-
-    mockUsageHistory.push({
-      id: String(mockUsageHistory.length + 1),
-      assetId,
-      assetName: asset.name,
-      action: 'access_revoked',
-      walletAddress: userAddress,
-      timestamp: new Date(),
-    });
-
-    return simulateTransaction({
-      success: true,
-      hash: generateTxHash(),
-    });
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
 }
 
 /**
  * Get usage history for all assets or filtered by wallet address
  */
 export async function getUsageHistory(walletAddress?: string): Promise<UsageRecord[]> {
-  let history = [...mockUsageHistory];
-  
-  if (walletAddress) {
-    history = history.filter(
-      (record) => record.walletAddress.toLowerCase() === walletAddress.toLowerCase()
-    );
-  }
+    try {
+        const contract = await getContract(true);
+        let historyRecords: UsageRecord[] = [];
 
-  // Sort by timestamp descending
-  history.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  
-  return simulateTransaction(history, 500);
+        if (walletAddress) {
+            // Get history for specific user
+            const contractRecords = await contract.getUsageHistory(walletAddress);
+            
+            // For each record, we need to get the asset name
+            for (const record of contractRecords) {
+                const asset = await contract.getAssetDetails(record.assetId);
+                historyRecords.push(convertToUsageRecord(record, asset.name));
+            }
+        } else {
+            // This would require a different approach since the contract
+            // doesn't have a function to get all history
+            // For now we'll just return empty array for global history
+            // You might want to add a contract function for this if needed
+            console.warn('Getting full usage history not implemented - consider adding a contract function for this');
+        }
+
+        // Sort by timestamp descending
+        return historyRecords.sort((a, b) =>
+            b.timestamp.getTime() - a.timestamp.getTime()
+        );
+    } catch (error) {
+        console.error('Error fetching usage history:', error);
+ }
 }
 
 /**
  * Check if the connected network is Sepolia
  */
 export function isSepoliaNetwork(chainId: number): boolean {
-  return chainId === SEPOLIA_CHAIN_ID;
+    return chainId === SEPOLIA_CHAIN_ID;
 }
 
 /**
  * Get Sepolia network configuration for adding to MetaMask
  */
 export const SEPOLIA_NETWORK_CONFIG = {
-  chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
-  chainName: 'Sepolia Testnet',
-  nativeCurrency: {
-    name: 'SepoliaETH',
-    symbol: 'SEP',
-    decimals: 18,
-  },
-  rpcUrls: ['https://sepolia.infura.io/v3/'],
-  blockExplorerUrls: ['https://sepolia.etherscan.io/'],
+    chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
+    chainName: 'Sepolia Testnet',
+    nativeCurrency: {
+        name: 'SepoliaETH',
+        symbol: 'SEP',
+        decimals: 18,
+    },
+    rpcUrls: ['https://sepolia.infura.io/v3/'],
+    blockExplorerUrls: ['https://sepolia.etherscan.io/'],
 };

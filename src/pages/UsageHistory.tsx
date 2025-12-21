@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
+import { useWalletContext } from '@/contexts/WalletContext';
 import { getUsageHistory } from '@/services/blockchain';
 import { UsageRecord, ActionType } from '@/types/asset';
 import { cn } from '@/lib/utils';
@@ -17,12 +18,13 @@ const actionColors: Record<ActionType, string> = {
 };
 
 export default function UsageHistory() {
+  const { isConnected, address } = useWalletContext();
   const [history, setHistory] = useState<UsageRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchHistory = async () => {
     setIsLoading(true);
-    const result = await getUsageHistory();
+    const result = await getUsageHistory(address);
     setHistory(result);
     setIsLoading(false);
   };

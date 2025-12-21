@@ -25,6 +25,7 @@ export default function AssetDetails() {
 
   const fetchAsset = async () => {
     if (!id) return;
+    console.log("Fetching asset with id:", id);
     setIsLoading(true);
     const result = await getAssetById(id);
     setAsset(result);

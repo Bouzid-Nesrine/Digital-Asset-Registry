@@ -22,7 +22,9 @@ export default function MyAssets() {
     if (!address) return;
     setIsLoading(true);
     try {
+      console.log("Fetching assets for address:", address);
       const result = await getMyAssets(address);
+      console.log("Assets fetched:", result);
       setAssets(result);
     } finally {
       setIsLoading(false);
